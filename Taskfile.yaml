@@ -1,0 +1,47 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  default:
+    cmds:
+      - poetry run python -m subyo subtitles {{.CLI_ARGS}}
+
+  translate:
+    cmds:
+      - poetry run python -m subyo translate {{.CLI_ARGS}}
+
+  push:
+    desc: commit and pushes current changes
+    cmds:
+      - git add .  || true
+      - git commit -am "$(curl -s https://commit.cacko.net/index.txt)" || true
+      - git push || true
+
+  build:
+    desc: build
+    cmds:
+      - rm -rf dist/*
+      - poetry run python setup.py bdist_wheel
+
+  install:
+    desc: install
+    cmds:
+      - task: build
+      - pip uninstall -y {{.PROJECT}}
+      - find dist -type f -name "*.whl" | head -n 1 | xargs pip install
+
+  publish:
+    desc: publish
+    cmds:
+      - scp dist/* muzak:/var/www/pypi/packages/{{.PROJECT}}
+
+  deploy:
+    desc: all
+    cmds:
+      - task: push
+      - task: build
+      - task: publish

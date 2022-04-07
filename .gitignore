@@ -1,0 +1,9 @@
+*.whl
+build/
+.eggs/
+*.egg-info/
+dist/
+__pycache__
+*.srt
+*.mp4
+*.wav
