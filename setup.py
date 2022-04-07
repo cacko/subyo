@@ -26,7 +26,7 @@ setup(
         "stringcase >= 1.2.0",
     ],
     setup_requires=['wheel'],
-    python_requires="==3.10",
+    python_requires=">=3.10",
     packages=find_packages(include=['subyo', 'subyo.*']),
     entry_points="""
         [console_scripts]

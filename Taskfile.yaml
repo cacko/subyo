@@ -3,12 +3,12 @@
 version: '3'
 
 vars:
-  GREETING: Hello, World!
+  PROJECT: subyo
 
 tasks:
   default:
     cmds:
-      - poetry run python -m subyo subtitles {{.CLI_ARGS}}
+      - poetry run python -m {{.PROJECT}} subtitles {{.CLI_ARGS}}
 
   translate:
     cmds:
