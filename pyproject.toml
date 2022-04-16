@@ -11,10 +11,10 @@ click = "^8.1.2"
 torch = "^1.11.0"
 pydub = "^0.25.1"
 datasets = "^2.0.0"
-speechbrain = "^0.5.11"
 numpy = "1.22.3"
 moviepy = "^1.0.3"
 stringcase = "^1.2.0"
+torchaudio = "^0.11.0"
 
 [tool.poetry.dev-dependencies]
 
