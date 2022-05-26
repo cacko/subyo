@@ -24,7 +24,8 @@ setup(
         "numpy >= 1.22.3",
         "moviepy >= 1.0.3",
         "stringcase >= 1.2.0",
-        "torchaudio >= 0.11.0"
+        "torchaudio >= 0.11.0",
+        "sentencepiece >= 0.1.96"
     ],
     setup_requires=['wheel'],
     python_requires=">=3.10",

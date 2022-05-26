@@ -18,10 +18,11 @@ def cli():
 @cli.command('subtitles')
 @click.argument('path', type=click.Path(exists=True))
 @click.option('-m', '--model', default="")
-def cmd_export(path, model):
+@click.option('-t', '--threshold', default=0.3)
+def cmd_export(path, model, threshold):
     if len(model):
         AudioRecognition.register(model)
-    AudioRecognition.subtitles(path)
+    AudioRecognition.subtitles(path, threshold)
 
 
 @cli.command('translate')

@@ -5,6 +5,7 @@ import moviepy.editor as mp
 import math
 from hashlib import md5
 from stringcase import spinalcase
+from tqdm import tqdm
 
 
 class AudioRecognitionMeta(type):
@@ -32,8 +33,8 @@ class AudioRecognitionMeta(type):
             cls._pipeline = pipeline(task=cls._task, model=cls._model_name)
         return cls._pipeline
 
-    def subtitles(cls, path):
-        return cls(path).do_subtitles()
+    def subtitles(cls, path, threshold):
+        return cls(path).do_subtitles(threshold)
 
 
 def get_timestamp(time):
@@ -63,24 +64,23 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
 
     def __init__(self, path: str):
         self.__path = Path(path)
-        out_name = spinalcase(f"{self.__path.stem} {self.__class__.model_name.replace('/', ' ')}")
+        out_name = spinalcase(
+            f"{self.__path.stem} {self.__class__.model_name.replace('/', ' ')}")
         self.subtitle_path = Path(".") / f"{out_name}.{self.SUBTITLE_TYPE}"
         tmp_path = Path(self.temp_video_path)
         tmp_path.write_bytes(self.__path.read_bytes())
 
-    def do_subtitles(self):
+    def do_subtitles(self, threshold=0.3):
+        self.THRESHOLD = threshold
         clip, file_length = self.cvt_video2audio()
         self.extract_sound(clip, file_length)
         self.make_subtitle()
 
     def make_subtitle(self):
         subtitle_index = 1
-        pipe = self.__class__.pipeline
+        pipe = __class__.pipeline
         with self.subtitle_path.open("w") as out:
             source = AudioSegment.from_wav(self.audio_path)
-            normalized = "normalized.wav"
-            source.export(normalized, format="wav", parameters=["-filter:a", "loudnorm"])
-            source = AudioSegment.from_wav(normalized)
             for (idx, _) in enumerate(self.subtitle):
                 start, end = _
                 audio = source[start * 1000:end * 1000] + 20
@@ -108,6 +108,9 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
     def cvt_video2audio(self):
         video = mp.VideoFileClip(self.temp_video_path)
         video.audio.write_audiofile(self.audio_path)
+        source = AudioSegment.from_wav(self.audio_path)
+        source = source.apply_gain(-source.max_dBFS)
+        source.export(self.audio_path, format="wav")
         my_clip = mp.VideoFileClip(self.temp_video_path)
         file_length = math.floor(my_clip.audio.end / self.WINDOW_SIZE)
         return my_clip, file_length
@@ -115,7 +118,7 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
     def extract_sound(self, my_clip, file_length):
         is_start_speak = True
         start_time = 0
-        for i in range(file_length):
+        for i in tqdm(range(file_length), desc="marking speech segments"):
             s = my_clip.audio.subclip(
                 i * self.WINDOW_SIZE, (i + 1) * self.WINDOW_SIZE)
             if s.max_volume() > self.THRESHOLD:

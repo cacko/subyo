@@ -31,7 +31,6 @@ tasks:
     desc: install
     cmds:
       - task: build
-      - pip uninstall -y {{.PROJECT}}
       - find dist -type f -name "*.whl" | head -n 1 | xargs pip install
 
   publish:
