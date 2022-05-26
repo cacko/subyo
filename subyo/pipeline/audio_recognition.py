@@ -5,7 +5,7 @@ import moviepy.editor as mp
 import math
 from hashlib import md5
 from stringcase import spinalcase
-from tqdm import tqdm
+from alive_progress import alive_bar
 
 
 class AudioRecognitionMeta(type):
@@ -81,10 +81,14 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
         pipe = __class__.pipeline
         with self.subtitle_path.open("w") as out:
             source = AudioSegment.from_wav(self.audio_path)
-            for (idx, _) in enumerate(self.subtitle):
-                start, end = _
-                audio = source[start * 1000:end * 1000] + 20
-                if audio:
+            with alive_bar(total=len(self.subtitle), title="voice recognition") as progress:
+                for offsets in self.subtitle:
+                    start, end = offsets
+                    audio = source[start * 1000:end * 1000] + 20
+                    progress()
+                    if not audio:
+                        print("no audio")
+                        continue
                     try:
                         audio.export("tmp.wav", format="wav", parameters=[
                             "-ac", "1", '-ar', "16000"
@@ -102,15 +106,15 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
                         subtitle_index += 1
                     except Exception as e:
                         print(e)
-                else:
-                    print('no audio')
 
     def cvt_video2audio(self):
         video = mp.VideoFileClip(self.temp_video_path)
         video.audio.write_audiofile(self.audio_path)
+
         source = AudioSegment.from_wav(self.audio_path)
-        source = source.apply_gain(-source.max_dBFS)
-        source.export(self.audio_path, format="wav")
+        normalized = source.apply_gain(-source.max_dBFS)
+        normalized.export(self.audio_path, format="wav")
+
         my_clip = mp.VideoFileClip(self.temp_video_path)
         file_length = math.floor(my_clip.audio.end / self.WINDOW_SIZE)
         return my_clip, file_length
@@ -118,15 +122,17 @@ class AudioRecognition(object, metaclass=AudioRecognitionMeta):
     def extract_sound(self, my_clip, file_length):
         is_start_speak = True
         start_time = 0
-        for i in tqdm(range(file_length), desc="marking speech segments"):
-            s = my_clip.audio.subclip(
-                i * self.WINDOW_SIZE, (i + 1) * self.WINDOW_SIZE)
-            if s.max_volume() > self.THRESHOLD:
-                if is_start_speak:
-                    start_time = i * self.WINDOW_SIZE
-                is_start_speak = False
-            else:
-                if not is_start_speak:
-                    end_time = i * self.WINDOW_SIZE
-                    self.subtitle.append((start_time, end_time))
-                is_start_speak = True
+        with alive_bar(file_length, title="marking speech segments") as progress:
+            for i in range(file_length):
+                s = my_clip.audio.subclip(
+                    i * self.WINDOW_SIZE, (i + 1) * self.WINDOW_SIZE)
+                if s.max_volume() > self.THRESHOLD:
+                    if is_start_speak:
+                        start_time = i * self.WINDOW_SIZE
+                    is_start_speak = False
+                else:
+                    if not is_start_speak:
+                        end_time = i * self.WINDOW_SIZE
+                        self.subtitle.append((start_time, end_time))
+                    is_start_speak = True
+                progress()
